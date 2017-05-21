@@ -235,9 +235,6 @@ class BucketSentenceIter(mx.io.DataIter):
                 trainX.append(x)
                 trainY.append(y)
         print str(len(trainY)) + ' samples'
-        for it in range(0, 5):
-            trainX += trainX
-            trainY += trainY
                 
         self.trainX = trainX
         self.trainY = trainY
