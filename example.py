@@ -1,11 +1,18 @@
 import pdb
 import poserecog.pipe as pipe
-import cv2
-
-pdb.set_trace()
+import glob
 
 config_path = 'model/model.config'
 piper = pipe.Pipeline(config_path)
 
-img = cv2.imread('./test/test.jpg')
-ret = piper.process(img)
+pdb.set_trace()
+path = []
+base_path = '/home/gengshan/workJan/poseEstm_rtpose/camData/'
+for cls in glob.glob(base_path+'/*'):
+  for subcls in glob.glob( cls+'/*'):
+    path += glob.glob( subcls+'/*/')
+pdb.set_trace()
+
+for it in path:
+  print it
+  piper.process(it)

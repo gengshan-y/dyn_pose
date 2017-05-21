@@ -71,3 +71,20 @@ def getJetColor(v, vmin, vmax):
         c[2] = 256 * (-4 * v + 4.5) #R: 1 ~ 0.5                      
     return c
 
+def recReadDir(baseDir, contain = ''):
+    """ read filenames recursively """
+    # no dir to expand, return
+    if len([x for x in baseDir if os.path.isdir(x)]) == 0:
+        # filter before return results
+        baseDir = [x for x in baseDir if contain in x]
+        return baseDir
+    # expand dirs
+    out = []
+    for it in baseDir:
+        if os.path.isdir(it):
+            # expand dirs
+            out += [os.path.abspath(os.path.join(it,x)) for x in os.listdir(it)]
+        elif contain in it:
+            # filter one more time to make efficient
+            out += [it]
+    return recReadDir(out, contain)
