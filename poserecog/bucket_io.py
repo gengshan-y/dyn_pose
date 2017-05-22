@@ -89,7 +89,6 @@ class BucketSentenceIter(mx.io.DataIter):
         #     sentence = self.text2id(sentence, vocab)
         #     if len(sentence) == 0:
         #         continue
-
         for it, sentence in enumerate(trainX):
             for i, bkt in enumerate(buckets):
                 if bkt >= len(sentence):

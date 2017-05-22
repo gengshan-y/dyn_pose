@@ -6,7 +6,6 @@ import numpy as np
 
 class CamIter:
   def __init__(self,boxsize=368,path=None,stream=False,batch_size=1):
-    path = '/home/gengshan/workJan/poseEstm_rtpose/camData/lhandsup/1/20170116_134023'
     self.boxsize = boxsize
     self.iter_list = glob.glob(path+'*.jpg')
     self.num_data = len(self.iter_list)

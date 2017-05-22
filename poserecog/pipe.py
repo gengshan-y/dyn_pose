@@ -86,8 +86,9 @@ class Pipeline:
         #self.disp_map(person_image.copy(), ret)
         write_list.append( {'id':imgdt_list[i]['path'],'p':ret} )
     if write:
-      json.dump(write_list, open('out/'+img_path.split('/')[-4]+ '_' +\
-                                        img_path.split('/')[-2]+'.json' ,'w'))
+      write_path = 'out/' + img_path.split('/')[-3]+ '_' + img_path.split('/')[-1]+'.json'
+      print 'writing to %s' % write_path
+      json.dump(write_list, open(write_path ,'w'))
 
 
   def display_pose(self, person_image, output):

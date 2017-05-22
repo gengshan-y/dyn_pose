@@ -14,5 +14,5 @@ for cls in glob.glob(base_path+'/*'):
 pdb.set_trace()
 
 for it in path:
-  print it
+  it = it[:-1];print it
   piper.process(it)
