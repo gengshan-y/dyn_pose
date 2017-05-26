@@ -16,3 +16,4 @@ pdb.set_trace()
 for it in path:
   it = it[:-1];print it
   piper.process(it)
+  print piper.max_len

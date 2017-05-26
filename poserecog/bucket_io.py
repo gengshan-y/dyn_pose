@@ -66,6 +66,15 @@ class BucketSentenceIter(mx.io.DataIter):
                  model_parallel=False, dataPath = './data'):
         super(BucketSentenceIter, self).__init__()
 
+        # pre-allocate with the largest bucket for better memory sharing
+        self.default_bucket_key = max(buckets)
+        buckets.sort()
+        self.buckets = buckets
+        self.data = [[] for _ in buckets]
+        self.tmpLabel = []
+
+
+
         # save data path
         self.data_path = dataPath
         self.dLoader()
@@ -77,13 +86,7 @@ class BucketSentenceIter(mx.io.DataIter):
         self.label_name = label_name
         self.model_parallel = model_parallel
 
-        buckets.sort()
-        self.buckets = buckets
-        self.data = [[] for _ in buckets]
-        self.tmpLabel = []
 
-        # pre-allocate with the largest bucket for better memory sharing
-        self.default_bucket_key = max(buckets)
 
         # for sentence in sentences:
         #     sentence = self.text2id(sentence, vocab)
@@ -189,13 +192,14 @@ class BucketSentenceIter(mx.io.DataIter):
                     assert len(sentence) == self.buckets[i_bucket]
                 
 
- 
                 label = self.label_buffer[i_bucket]
                 # label[:, :-1] = data[:, 1:]
                 # label[:, -1] = 0
                 vecLabel = np.asarray(self.tmpLabel)[idx]
                 for it, lb in enumerate(vecLabel):
+                    label[:] = 0  # no overlap bet. batches
                     label[it, :len(lb)] = lb
+                #print label
 
                 data_all = [mx.nd.array(data)]
                 label_all = [mx.nd.array(label)]
@@ -225,12 +229,18 @@ class BucketSentenceIter(mx.io.DataIter):
         trainY = []
         for idx, k in enumerate(data.keys()):
             print 'label: %d, category: %s' % (idx,k)
+            pdb.set_trace()
             # for each class
             for it in data[k]:
                 print it
                 x = json.load(open(it, 'r'))
-                x = [np.asarray(it['p']).reshape(-1) for it in x]
-                y =  [idx] * len(x)
+                #x = [np.asarray(it['p']).reshape(-1) for it in x]
+                x = [[idx]*2 for it in x]
+                y = [-1] * self.default_bucket_key
+                y[:len(x)] = [idx] * len(x)
+                #y[len(x)-1] = idx
+                #y =  [-1] * len(x)
+                #y[-1] = idx # indicate len
                 trainX.append(x)
                 trainY.append(y)
         print str(len(trainY)) + ' samples'

@@ -34,6 +34,7 @@ class Pipeline:
     self.model_pose = self.load_model(pose_model_path)
 
     self.gauss = self.get_gauss()
+    self.max_len = 0
 
 
   def get_gauss(self):
@@ -89,6 +90,12 @@ class Pipeline:
       write_path = 'out/' + img_path.split('/')[-3]+ '_' + img_path.split('/')[-1]+'.json'
       print 'writing to %s' % write_path
       json.dump(write_list, open(write_path ,'w'))
+    
+    self.set_max_len(len(write_list))
+
+
+  def set_max_len(self,l):
+    if l > self.max_len: self.max_len = l
 
 
   def display_pose(self, person_image, output):

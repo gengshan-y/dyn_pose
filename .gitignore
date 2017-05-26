@@ -94,3 +94,5 @@ ENV/
 #own
 model/
 out/
+trash/
+log/
