@@ -32,16 +32,17 @@ def Perplexity(label, pred):
 
 contexts = mx.context.gpu(5)
 batch_size = 1  #
-num_epochs = 25
+num_epochs = 200
 disp_batches = 5
-buckets = [38]  #
+buckets = [20]  #
 invalid_label = -1
 
-num_hidden = 10
-num_lstm_layer = 1
-num_embed = 256
+num_hidden = 200
+num_lstm_layer = 2
+num_embed = 200
 
 data_train = BucketSentenceIter(buckets, batch_size,dataPath = 'out' )
+data_val = BucketSentenceIter(buckets, batch_size,dataPath = 'out' )
 sym_gen_lstm = get_lstm_sym(num_hidden=num_hidden, num_lstm_layer=num_lstm_layer,\
                             num_embed=num_embed)
 
@@ -49,6 +50,8 @@ model = mx.mod.BucketingModule(
     sym_gen             = sym_gen_lstm,
     default_bucket_key  = data_train.default_bucket_key,
     context             = contexts)
+
+pdb.set_trace()
 
 summary_writer = tensorboard.FileWriter('log/')
 def monitor_train(param):
@@ -59,16 +62,17 @@ def monitor_train(param):
 batch_end_callbacks = [mx.callback.Speedometer(batch_size, disp_batches)]
 batch_end_callbacks.append(monitor_train)
 
+lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(step=[90,120], factor=0.5)
+optimizer = mx.optimizer.SGD(learning_rate = 0.00001, momentum = 0, wd = 0.00001,\
+                             lr_scheduler = lr_scheduler)
+
 model.fit(
     train_data          = data_train,
-    eval_data           = data_train,
+    eval_data           = data_val,
     #eval_metric         = mx.metric.np(Perplexity),
     eval_metric         = mx.metric.Perplexity(invalid_label),
     kvstore             = 'device',
-    optimizer           = 'sgd',
-    optimizer_params    = { 'learning_rate': 0.001,
-                            'momentum': 0,
-                            'wd': 0.00001 },
+    optimizer           = optimizer,
     initializer         = mx.init.Xavier(factor_type="in", magnitude=2.34),
     num_epoch           = num_epochs,
     batch_end_callback  = batch_end_callbacks,

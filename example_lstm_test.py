@@ -4,12 +4,12 @@ import numpy as np
 from poserecog.bucket_io import BucketSentenceIter
 from poserecog.get_lstm_sym import get_lstm_sym
 
-num_lstm_layer = 1
-num_hidden = 10
-num_embed = 256
+num_lstm_layer = 2
+num_hidden = 200
+num_embed = 200
 
 batch_size=1
-buckets=[38]
+buckets=[20]
 contexts = mx.gpu(5)
 
 data_train = BucketSentenceIter(buckets, batch_size,dataPath = 'out' )

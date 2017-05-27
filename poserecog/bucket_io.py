@@ -5,6 +5,7 @@ import mxnet as mx
 import os
 import json
 from poserecog.util import recReadDir
+from sklearn.preprocessing import normalize
 
 # The interface of a data iter that works for bucketing
 #
@@ -205,7 +206,7 @@ class BucketSentenceIter(mx.io.DataIter):
                 label_all = [mx.nd.array(label)]
                 data_names = ['data']
                 label_names = ['softmax_label']
-
+                pdb.set_trace()
                 data_batch = SimpleBatch(data_names, data_all, label_names, label_all,
                                          self.buckets[i_bucket])
                 yield data_batch
@@ -229,21 +230,29 @@ class BucketSentenceIter(mx.io.DataIter):
         trainY = []
         for idx, k in enumerate(data.keys()):
             print 'label: %d, category: %s' % (idx,k)
-            pdb.set_trace()
             # for each class
             for it in data[k]:
                 print it
-                x = json.load(open(it, 'r'))
-                #x = [np.asarray(it['p']).reshape(-1) for it in x]
-                x = [[idx]*2 for it in x]
-                y = [-1] * self.default_bucket_key
-                y[:len(x)] = [idx] * len(x)
+                rawx = json.load(open(it, 'r'))
+                pdb.set_trace()
+                x = [normalize( np.asarray(it['p'][:8]).reshape(1,-1),norm='l2')[0]\
+                     for it in rawx]
+                if len(x) < self.default_bucket_key:
+                    x += [np.zeros(len(x[0]))] * ( self.default_bucket_key - len(x) )
+                x = x[:self.default_bucket_key]
+                # x = [[idx]*2 for it in range(self.default_bucket_key)]
+                y = np.asarray([-1] * self.default_bucket_key)
+                if len(rawx) > self.default_bucket_key:
+                    y[-1] = idx
+                else:    
+                    y[len(rawx)-1] = idx
                 #y[len(x)-1] = idx
                 #y =  [-1] * len(x)
                 #y[-1] = idx # indicate len
                 trainX.append(x)
                 trainY.append(y)
         print str(len(trainY)) + ' samples'
+        pdb.set_trace()
                 
         self.trainX = trainX
         self.trainY = trainY
