@@ -22,9 +22,6 @@ init_states = init_c + init_h
 
 data_train = BucketSentenceIter(buckets, batch_size,dataPath = 'out' )
 data_train.provide_data += init_states
-sym_gen_lstm = get_lstm_sym(num_hidden=num_hidden, num_lstm_layer=num_lstm_layer,\
-                            num_embed=num_embed, num_label = num_label,\
-                            take_softmax=False, dropout=0.2)
 
 sym_gen = get_lstm_o(num_lstm_layer=num_lstm_layer, input_len=28,
             num_hidden = num_hidden, num_embed = num_embed,
@@ -36,13 +33,9 @@ model = mx.mod.BucketingModule(
     context             = contexts)
 
 _, arg_params, aux_params = mx.model.load_checkpoint('model/pose_lstm',10)
-#model.bind(data_shapes=data_train.provide_data,label_shapes=data_train.provide_label,for_training=False)
-#model.set_params(arg_params = arg_params, aux_params=aux_params)
+model.bind(data_shapes=data_train.provide_data,label_shapes=data_train.provide_label,for_training=False)
+model.set_params(arg_params = arg_params, aux_params=aux_params)
 
-pdb.set_trace()
-model = LSTMInferenceModel(num_lstm_layer, 28,
-                           num_hidden=num_hidden, num_embed=num_embed,
-                           num_label = num_label, arg_params=arg_params, ctx=mx.gpu(), dropout=0.2)
 
 data_iter = iter(data_train)
 end_of_batch = False
@@ -51,13 +44,8 @@ while not end_of_batch:
   lbs=next_data_batch.label[0].asnumpy().flatten()
   print 'cate:%f' % lbs[np.where(lbs != -1)][0]
   print next_data_batch.data[0].asnumpy()[0]
-  #model.forward(next_data_batch)
-  #ret = model.get_outputs()[0].asnumpy()
-  ret = np.zeros((buckets[0],num_label))
-  ret[0] = model.forward(mx.ndarray.reshape(next_data_batch.data[0][0][0],(1,-1)),True)
-  for i,dt in enumerate(next_data_batch.data[0][0][1:]):
-    ret[i+1] = model.forward(mx.ndarray.reshape(dt,(1,-1)))
-  pdb.set_trace()
+  model.forward(next_data_batch)
+  ret = model.get_outputs()[0].asnumpy()
   print np.argmax(np.sum(ret,axis=0)[1:])+1
   try:
     next_data_batch = next(data_iter)
