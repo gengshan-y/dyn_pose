@@ -36,8 +36,8 @@ model = mx.mod.BucketingModule(
     context             = contexts)
 
 _, arg_params, aux_params = mx.model.load_checkpoint('model/pose_lstm',10)
-model.bind(data_shapes=data_train.provide_data,label_shapes=data_train.provide_label,for_training=False)
-model.set_params(arg_params = arg_params, aux_params=aux_params)
+#model.bind(data_shapes=data_train.provide_data,label_shapes=data_train.provide_label,for_training=False)
+#model.set_params(arg_params = arg_params, aux_params=aux_params)
 
 pdb.set_trace()
 model = LSTMInferenceModel(num_lstm_layer, 28,
