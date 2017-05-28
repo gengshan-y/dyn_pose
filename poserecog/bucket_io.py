@@ -64,7 +64,7 @@ class DummyIter(mx.io.DataIter):
 class BucketSentenceIter(mx.io.DataIter):
     def __init__(self, buckets, batch_size,
                  data_name='data', label_name='label',
-                 model_parallel=False, dataPath = './data'):
+                 model_parallel=False, dataPath = './data', aug = False):
         super(BucketSentenceIter, self).__init__()
 
         # pre-allocate with the largest bucket for better memory sharing
@@ -73,6 +73,7 @@ class BucketSentenceIter(mx.io.DataIter):
         self.buckets = buckets
         self.data = [[] for _ in buckets]
         self.tmpLabel = []
+        self.aug = aug
 
 
 
@@ -228,15 +229,19 @@ class BucketSentenceIter(mx.io.DataIter):
         trainX = []
         trainY = []
         for idx, k in enumerate(data.keys()):
-            print 'label: %d, category: %s' % (idx,k)
+            print 'label: %d, category: %s' % (idx+1,k)
             # for each class
             for it in data[k]:
                 print it
                 rawx = json.load(open(it, 'r'))
-                x = [np.asarray(it['p']).reshape(-1,) for it in rawx]
-                #x = [normalize( np.asarray(it['p'][:8]).reshape(1,-1),\
-                #                norm='l2')[0] for it in rawx]
-                #x = [[idx]*2 for it in range(self.default_bucket_key)]
+                anc = np.asarray(rawx[0]['p'])
+                anc_head = anc[0]
+                anc_len = np.linalg.norm(anc[2] - anc[3]) +\
+                          np.linalg.norm(anc[3] - anc[4]) +\
+                          np.linalg.norm(anc[5] - anc[6]) +\
+                          np.linalg.norm(anc[6] - anc[7]) +\
+                          np.linalg.norm(anc[2] - anc[5])
+                x = [(it['p']-anc_head).reshape(-1,)/anc_len for it in rawx]
                 y = np.asarray([0] * self.default_bucket_key)
                 y[:len(rawx)] = idx + 1
                 #y[len(x)-1] = idx
@@ -246,9 +251,10 @@ class BucketSentenceIter(mx.io.DataIter):
                 trainY.append(y)
         print str(len(trainY)) + ' samples'
     
-        for it in range(0, 5):
-          trainX += trainX
-          trainY += trainY    
+        if self.aug:
+          for it in range(0, 5):
+            trainX += trainX
+            trainY += trainY    
         
         self.trainX = trainX
         self.trainY = trainY

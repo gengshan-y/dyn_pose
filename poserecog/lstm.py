@@ -1,6 +1,4 @@
 # pylint:skip-file
-import sys
-sys.path.insert(0, "../../python")
 import mxnet as mx
 import numpy as np
 from collections import namedtuple
@@ -66,9 +64,9 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
     # embeding layer
     data = mx.sym.Variable('data')
     label = mx.sym.Variable('softmax_label')
-    # embed = mx.sym.Embedding(data=data, input_dim=input_size,
-    #                          weight=embed_weight, output_dim=num_embed, name='embed')
-    # wordvec = mx.sym.SliceChannel(data=embed, num_outputs=seq_len, squeeze_axis=1)
+    if num_embed:
+      data = mx.sym.Embedding(data=data, input_dim=input_size,
+                       weight=embed_weight, output_dim=num_embed, name='embed')
     wordvec = mx.sym.SliceChannel(data=data, num_outputs=seq_len, squeeze_axis=1)
 
     hidden_all = []
@@ -115,53 +113,3 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
                   'l1_init_c','l2_init_c',\
                   'l0_init_h','l1_init_h',\
                   'l2_init_h'],('softmax_label',)
-
-def lstm_inference_symbol(num_lstm_layer, input_size,
-                          num_hidden, num_embed, num_label, dropout=0.):
-    seqidx = 0
-    embed_weight=mx.sym.Variable("embed_weight")
-    cls_weight = mx.sym.Variable("cls_weight")
-    cls_bias = mx.sym.Variable("cls_bias")
-    param_cells = []
-    last_states = []
-    for i in range(num_lstm_layer):
-        param_cells.append(LSTMParam(i2h_weight = mx.sym.Variable("l%d_i2h_weight" % i),
-                                      i2h_bias = mx.sym.Variable("l%d_i2h_bias" % i),
-                                      h2h_weight = mx.sym.Variable("l%d_h2h_weight" % i),
-                                      h2h_bias = mx.sym.Variable("l%d_h2h_bias" % i)))
-        state = LSTMState(c=mx.sym.Variable("l%d_init_c" % i),
-                          h=mx.sym.Variable("l%d_init_h" % i))
-        last_states.append(state)
-    assert(len(last_states) == num_lstm_layer)
-    data = mx.sym.Variable("data")
-
-    hidden = data
-
-    # hidden = mx.sym.Embedding(data=data,
-    #                           input_dim=input_size,
-    #                           output_dim=num_embed,
-    #                           weight=embed_weight,
-    #                           name="embed")
-    # stack LSTM
-    for i in range(num_lstm_layer):
-        if i==0:
-            dp=0.
-        else:
-            dp = dropout
-        next_state = lstm(num_hidden, indata=hidden,
-                          prev_state=last_states[i],
-                          param=param_cells[i],
-                          seqidx=seqidx, layeridx=i, dropout=dp)
-        hidden = next_state.h
-        last_states[i] = next_state
-    # decoder
-    if dropout > 0.:
-        hidden = mx.sym.Dropout(data=hidden, p=dropout)
-    fc = mx.sym.FullyConnected(data=hidden, num_hidden=num_label,
-                               weight=cls_weight, bias=cls_bias, name='pred')
-    sm = mx.sym.SoftmaxOutput(data=fc, name='softmax')
-    output = [sm]
-    for state in last_states:
-        output.append(state.c)
-        output.append(state.h)
-    return mx.sym.Group(output)

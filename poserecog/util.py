@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from cStringIO import StringIO
 import scipy.ndimage
