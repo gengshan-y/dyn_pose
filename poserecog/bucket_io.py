@@ -97,7 +97,6 @@ class BucketSentenceIter(mx.io.DataIter):
             for i, bkt in enumerate(buckets):
                 if bkt >= len(sentence):
                     sentence = np.asarray(sentence)
-                    sentence = np.ndarray.astype(sentence, 'int')
                     self.data[i].append(sentence)
                     self.tmpLabel.append(trainY[it])
                     break
@@ -169,7 +168,6 @@ class BucketSentenceIter(mx.io.DataIter):
                 self.data[i] = np.transpose(bucket_data)
 
     def __iter__(self):
-
         for i_bucket in self.bucket_plan:
             data = self.data_buffer[i_bucket]
             i_idx = self.bucket_curr_idx[i_bucket]
@@ -197,8 +195,8 @@ class BucketSentenceIter(mx.io.DataIter):
                 # label[:, :-1] = data[:, 1:]
                 # label[:, -1] = 0
                 vecLabel = np.asarray(self.tmpLabel)[idx]
+                label[:] = 0  # no overlap bet. batches
                 for it, lb in enumerate(vecLabel):
-                    label[:] = 0  # no overlap bet. batches
                     label[it, :len(lb)] = lb
                 #print label
 
@@ -206,10 +204,10 @@ class BucketSentenceIter(mx.io.DataIter):
                 label_all = [mx.nd.array(label)]
                 data_names = ['data']
                 label_names = ['softmax_label']
-                pdb.set_trace()
                 data_batch = SimpleBatch(data_names, data_all, label_names, label_all,
                                          self.buckets[i_bucket])
                 yield data_batch
+       
 
 
     def reset(self):
@@ -234,25 +232,22 @@ class BucketSentenceIter(mx.io.DataIter):
             for it in data[k]:
                 print it
                 rawx = json.load(open(it, 'r'))
-                pdb.set_trace()
-                x = [normalize( np.asarray(it['p'][:8]).reshape(1,-1),norm='l2')[0]\
-                     for it in rawx]
-                if len(x) < self.default_bucket_key:
-                    x += [np.zeros(len(x[0]))] * ( self.default_bucket_key - len(x) )
-                x = x[:self.default_bucket_key]
-                # x = [[idx]*2 for it in range(self.default_bucket_key)]
-                y = np.asarray([-1] * self.default_bucket_key)
-                if len(rawx) > self.default_bucket_key:
-                    y[-1] = idx
-                else:    
-                    y[len(rawx)-1] = idx
+                x = [np.asarray(it['p']).reshape(-1,) for it in rawx]
+                #x = [normalize( np.asarray(it['p'][:8]).reshape(1,-1),\
+                #                norm='l2')[0] for it in rawx]
+                #x = [[idx]*2 for it in range(self.default_bucket_key)]
+                y = np.asarray([0] * self.default_bucket_key)
+                y[:len(rawx)] = idx + 1
                 #y[len(x)-1] = idx
                 #y =  [-1] * len(x)
                 #y[-1] = idx # indicate len
                 trainX.append(x)
                 trainY.append(y)
         print str(len(trainY)) + ' samples'
-        pdb.set_trace()
-                
+    
+        for it in range(0, 5):
+          trainX += trainX
+          trainY += trainY    
+        
         self.trainX = trainX
         self.trainY = trainY
