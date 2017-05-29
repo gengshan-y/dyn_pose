@@ -64,7 +64,7 @@ class DummyIter(mx.io.DataIter):
 class BucketSentenceIter(mx.io.DataIter):
     def __init__(self, buckets, batch_size,
                  data_name='data', label_name='label',
-                 model_parallel=False, dataPath = './data', aug = False):
+                 model_parallel=False, dataPath = './data', train = False):
         super(BucketSentenceIter, self).__init__()
 
         # pre-allocate with the largest bucket for better memory sharing
@@ -73,7 +73,7 @@ class BucketSentenceIter(mx.io.DataIter):
         self.buckets = buckets
         self.data = [[] for _ in buckets]
         self.tmpLabel = []
-        self.aug = aug
+        self.train = train
 
 
 
@@ -216,15 +216,21 @@ class BucketSentenceIter(mx.io.DataIter):
         self.bucket_curr_idx = [0 for x in self.data]
 
     def dLoader(self):
-        print( 'reading from ' + self.data_path )
-        flist = [x.split('/')[-1] for x in  glob.glob(self.data_path + '/*')]
-        cates = set([x.split('_')[0] for x in flist])
+        with open('split.json', 'r') as f:
+          split = json.load(f)
+        if self.train:
+          split = split['train']
+        else:
+          split = split['val']
+        print( 'reading from %s, phase train %d' % (self.data_path,self.train) )
+        cates = set([x.split('_')[0] for x in split])
         print 'categories: ' + str(cates)
 
         data = {}
         # get data path
         for cate in cates:
-            data[cate] = glob.glob( self.data_path + '/' + cate + '*.json' )
+            data[cate] = sum([glob.glob('%s/%s*.json'%(self.data_path,x))\
+                          for x in split if cate in x] ,[])
 
         trainX = []
         trainY = []
@@ -251,7 +257,7 @@ class BucketSentenceIter(mx.io.DataIter):
                 trainY.append(y)
         print str(len(trainY)) + ' samples'
     
-        if self.aug:
+        if self.train:
           for it in range(0, 5):
             trainX += trainX
             trainY += trainY    

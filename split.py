@@ -17,15 +17,16 @@ class_map = {}
 for c in keys:
   class_map[c] = [v for v in vid_list if c == v.split('/')[cate_pos]]
 
-print 'has %d categories' % len(keys)
-print keys
-print class_map[keys[0]]
 
 
+from sklearn.model_selection import train_test_split
+train_l = [];val_l=[]
 for k in keys:
-  for v in class_map[k]:
-    n = v.split(suffix)[0].split('/')[-1]
-    img_path = '%s/%s_%s_%s' % (out_path, k, n, '%04d.jpg')
-    cmd = '%s/ffmpeg -i %s -r %d %s' % (bin_path, v, fps, img_path)
-    a = subprocess.check_output(cmd, shell = True, stderr=subprocess.STDOUT)
-    print a
+  lbs = ['%s_%s'%(k,x.split(suffix)[0].split('/')[-1]) for x in class_map[k]]
+  train,val = train_test_split(lbs,test_size=0.3)
+  train_l += train; val_l += val
+
+pdb.set_trace()
+import json
+with open('split.json','w') as f:
+  json.dump({'train':train_l,'val':val_l}, f)

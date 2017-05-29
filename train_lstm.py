@@ -36,8 +36,11 @@ init_h = [('l%d_init_h'%l, (lcf.batch_size, lcf.num_hidden)) \
           for l in range(lcf.num_lstm_layer)]
 init_states = init_c + init_h
 
-data_train = BucketSentenceIter(lcf.buckets, lcf.batch_size,dataPath = 'out', aug = True )
-data_val = BucketSentenceIter(lcf.buckets, lcf.batch_size,dataPath = 'out' )
+data_train = BucketSentenceIter(lcf.buckets, lcf.batch_size,\
+                                dataPath = 'out', train = True )
+data_val = BucketSentenceIter(lcf.buckets, lcf.batch_size,\
+                                dataPath = 'out' )
+
 data_train.provide_data += init_states
 data_val.provide_data += init_states
 
@@ -56,7 +59,7 @@ batch_end_callbacks = [mx.callback.Speedometer(lcf.batch_size, lcf.disp_batches)
 batch_end_callbacks.append(monitor_train)
 #batch_end_callbacks.append(mon_grad)
 
-lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(step=[8000,15000], factor=0.5)
+lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(step=[5000,10000], factor=0.5)
 optimizer = mx.optimizer.SGD(learning_rate = 0.01, momentum = 0, wd = 0.0001,\
                   lr_scheduler = lr_scheduler, rescale_grad = 1./lcf.batch_size)
 

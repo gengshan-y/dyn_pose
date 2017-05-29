@@ -3,9 +3,10 @@ import poserecog.pipe as pipe
 import glob
 
 config_path = 'model/model.config'
+base_path = 'dataset/pose'
+
 piper = pipe.Pipeline(config_path)
 
-base_path = 'dataset/weizmann'
 img_list = glob.glob(base_path+'/*.jpg')
 scls = set([x.split('/')[-1].rsplit('_',1)[0] for x in img_list])
 print '%d videos' % len(scls)
