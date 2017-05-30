@@ -75,8 +75,6 @@ class BucketSentenceIter(mx.io.DataIter):
         self.tmpLabel = []
         self.train = train
 
-
-
         # save data path
         self.data_path = dataPath
         self.dLoader()
@@ -224,7 +222,7 @@ class BucketSentenceIter(mx.io.DataIter):
           split = split['val']
         print( 'reading from %s, phase train %d' % (self.data_path,self.train) )
         cates = set([x.split('_')[0] for x in split])
-        cates.remove('stop')
+        cates.remove('stop');cates.remove('circle')
         pdb.set_trace()
         print 'categories: ' + str(cates)
         self.cls_num = len(cates)

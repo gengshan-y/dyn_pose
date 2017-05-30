@@ -16,3 +16,4 @@ class lstm_config(object):
   dropout = float(config.get('model', 'dropout'))
 
   load_epoch = int(config.get('model', 'load_epoch'))
+  test_buckets = int(config.get('model', 'test_buckets'))

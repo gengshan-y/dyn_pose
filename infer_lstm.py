@@ -31,6 +31,7 @@ model.bind(data_shapes=data_train.provide_data,label_shapes=data_train.provide_l
            for_training=False)
 model.set_params(arg_params = arg_params, aux_params=aux_params)
 
+pdb.set_trace()
 
 data_iter = iter(data_train)
 end_of_batch = False
@@ -41,6 +42,7 @@ while not end_of_batch:
   #print 'cate:%f' % lbs[np.where(lbs != -1)][0]
   #print next_data_batch.data[0].asnumpy()[0]
   model.forward(next_data_batch)
+  pdb.set_trace()
   ret = model.get_outputs()[0].asnumpy()
   lb.append( lbs[np.where(lbs != 0)][0] )
   pd.append(np.argmax(np.sum(ret,axis=0)[1:])+1) 

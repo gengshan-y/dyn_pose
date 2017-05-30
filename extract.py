@@ -16,6 +16,7 @@ print '%d videos' % len(scls)
 
 for c in scls:
   path =  '%s/%s_*.jpg' % (base_path,c)
-  print path
-  piper.reset()
-  piper.process(path)
+  piper.extract(path)
+
+piper.plot_len_dist()
+
