@@ -11,8 +11,12 @@ img_list = glob.glob(base_path+'/*.jpg')
 scls = set([x.split('/')[-1].rsplit('_',1)[0] for x in img_list])
 print '%d videos' % len(scls)
 
+#pdb.set_trace()
+#scls=['up_IPC_20170529121800']
+
 for c in scls:
   path =  '%s/%s_*.jpg' % (base_path,c)
   piper.process(path)
 
 piper.plot_len_dist()
+

@@ -1,7 +1,109 @@
 import os
+import cv2
 import numpy as np
 from cStringIO import StringIO
 import scipy.ndimage
+
+
+def bbox_pred(boxes, box_deltas):
+    """
+    Transform the set of class-agnostic boxes into class-specific boxes
+    by applying the predicted offsets (box_deltas)
+    :param boxes: !important [N 4]
+    :param box_deltas: [N, 4 * num_classes]
+    :return: [N 4 * num_classes]
+    """
+    if boxes.shape[0] == 0:
+        return np.zeros((0, box_deltas.shape[1]))
+
+    boxes = boxes.astype(np.float, copy=False)
+    widths = boxes[:, 2] - boxes[:, 0] + 1.0
+    heights = boxes[:, 3] - boxes[:, 1] + 1.0
+    ctr_x = boxes[:, 0] + 0.5 * (widths - 1.0)
+    ctr_y = boxes[:, 1] + 0.5 * (heights - 1.0)
+
+    dx = box_deltas[:, 0::4]
+    dy = box_deltas[:, 1::4]
+    dw = box_deltas[:, 2::4]
+    dh = box_deltas[:, 3::4]
+
+    pred_ctr_x = dx * widths[:, np.newaxis] + ctr_x[:, np.newaxis]
+    pred_ctr_y = dy * heights[:, np.newaxis] + ctr_y[:, np.newaxis]
+    pred_w = np.exp(dw) * widths[:, np.newaxis]
+    pred_h = np.exp(dh) * heights[:, np.newaxis]
+
+    pred_boxes = np.zeros(box_deltas.shape)
+    # x1
+    pred_boxes[:, 0::4] = pred_ctr_x - 0.5 * (pred_w - 1.0)
+    # y1
+    pred_boxes[:, 1::4] = pred_ctr_y - 0.5 * (pred_h - 1.0)
+    # x2
+    pred_boxes[:, 2::4] = pred_ctr_x + 0.5 * (pred_w - 1.0)
+    # y2
+    pred_boxes[:, 3::4] = pred_ctr_y + 0.5 * (pred_h - 1.0)
+
+    return pred_boxes
+
+def clip_boxes(boxes, im_shape):
+    """
+    Clip boxes to image boundaries.
+    :param boxes: [N, 4* num_classes]
+    :param im_shape: tuple of 2
+    :return: [N, 4* num_classes]
+    """
+    # x1 >= 0
+    boxes[:, 0::4] = np.maximum(np.minimum(boxes[:, 0::4], im_shape[1] - 1), 0)
+    # y1 >= 0
+    boxes[:, 1::4] = np.maximum(np.minimum(boxes[:, 1::4], im_shape[0] - 1), 0)
+    # x2 < im_shape[1]
+    boxes[:, 2::4] = np.maximum(np.minimum(boxes[:, 2::4], im_shape[1] - 1), 0)
+    # y2 < im_shape[0]
+    boxes[:, 3::4] = np.maximum(np.minimum(boxes[:, 3::4], im_shape[0] - 1), 0)
+    return boxes
+
+
+def transform(im, pixel_means):
+    """
+    transform into mxnet tensor,
+    subtract pixel size and transform to correct format
+    :param im: [height, width, channel] in BGR
+    :param pixel_means: [B, G, R pixel means]
+    :return: [batch, channel, height, width]
+    """
+    im_tensor = np.zeros((3, im.shape[0], im.shape[1]))
+    for i in range(3):
+        im_tensor[i, :, :] = im[:, :, 2 - i] - pixel_means[2 - i]
+    return im_tensor
+
+def resize(im, target_size, max_size, stride=0):
+    """
+    only resize input image to target size and return scale
+    :param im: BGR image input by opencv
+    :param target_size: one dimensional size (the short side)
+    :param max_size: one dimensional max size (the long side)
+    :param stride: if given, pad the image to designated stride
+    :return:
+    """
+    im_shape = im.shape
+    im_size_min = np.min(im_shape[0:2])
+    im_size_max = np.max(im_shape[0:2])
+    im_scale = float(target_size) / float(im_size_min)
+    # prevent bigger axis from being more than max_size:
+    if np.round(im_scale * im_size_max) > max_size:
+        im_scale = float(max_size) / float(im_size_max)
+    im = cv2.resize(im, None, None, fx=im_scale, fy=im_scale, interpolation=cv2.INTER_LINEAR)
+
+    if stride == 0:
+        return im, im_scale
+    else:
+        # pad to product of stride
+        im_height = int(np.ceil(im.shape[0] / float(stride)) * stride)
+        im_width = int(np.ceil(im.shape[1] / float(stride)) * stride)
+        im_channel = im.shape[2]
+        padded_im = np.zeros((im_height, im_width, im_channel))
+        padded_im[:im.shape[0], :im.shape[1], :] = im
+        return padded_im, im_scale
+
 
 def get_maxima(dmap):
   data_max = scipy.ndimage.filters.maximum_filter(dmap, 3)

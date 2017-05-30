@@ -11,6 +11,7 @@ import ConfigParser
 import mxnet as mx
 import poserecog.util as util
 from poserecog.data import CamIter as CamIter
+from poserecog.symbol_vgg import get_vgg_test
 
 
 class Pipeline:
@@ -31,16 +32,24 @@ class Pipeline:
     pose_model_path = os.path.join(base_folder, pose_model_prefix)
 
     self.model_det = self.load_model(det_model_path)
+    #self.model_det = self.load_model(det_model_path)
     self.model_pose = self.load_model(pose_model_path)
 
     self.gauss = self.get_gauss()
     self.length = []
 
+  
 
   def get_gauss(self):
     gauss1d = scipy.signal.gaussian(self.boxsize,self.sigma)
     gauss2d = np.expand_dims(gauss1d,0) * np.expand_dims(gauss1d,1)
     return np.transpose(gauss2d[:,:,np.newaxis], (2,0,1))
+
+
+  def load_module(self, path, net):
+    arg_params, aux_params = util.load_params(path,0)
+    model = mx.module.Module(net, data_names = ['data','im_info'],\
+                             label_names = None, context = self.ctx)
 
 
   def load_model(self, model_path):
@@ -53,7 +62,7 @@ class Pipeline:
     return model
 
   def process(self, img_path, write=True):
-    cam_iter = CamIter(boxsize=self.boxsize,path=img_path,batch_size=1)
+    cam_iter = CamIter(boxsize=self.boxsize,path=img_path)
     write_list=[]
     while cam_iter.iter_next():
       batch,imgdt_list = cam_iter.next()
@@ -61,12 +70,19 @@ class Pipeline:
       output=self.model_det.predict(batch)
       print('Person net took %.2f ms.' % (1000 * (time.time() - start_time)))
 
+
       # form another batch
       batch_pose = [];gausses = []
-      for i,it in enumerate(output):
-        person_map = np.squeeze(it)
-        person_map_resized = cv2.resize(person_map, (0,0), fx=8, fy=8, interpolation=cv2.INTER_CUBIC)
-        x,y = util.get_maxima(person_map_resized)
+      for i in range(len(output[0])):
+        rois = output[0][i,:,1:]
+        person_scores = output[1][i,:,15]
+        box_deltas = output[2][i,:,60:64]
+        boxes = util.bbox_pred(rois, box_deltas)
+        boxes = util.clip_boxes(boxes, (600,800))
+        boxes = boxes / imgdt_list[i]['scale']
+        idx = np.argmax(person_scores)
+        b = boxes[idx];x=(b[0]+b[2])/2;y=(b[1]+b[3])/2
+        
         person_image=cv2.getRectSubPix(imgdt_list[i]['img'],(self.boxsize,self.boxsize),(x,y))
         img1 = np.transpose(np.float32(person_image), (2,0,1))/256 - 0.5
         batch_pose.append(img1);gausses.append(self.gauss)

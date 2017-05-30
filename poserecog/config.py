@@ -12,7 +12,6 @@ class lstm_config(object):
   input_dim = int(config.get('model', 'input_dim'))
   num_hidden = int(config.get('model', 'num_hidden'))
   num_embed = int(config.get('model', 'num_embed'))
-  num_label = int(config.get('model', 'num_label'))
   buckets = [int(config.get('model', 'buckets'))]
   dropout = float(config.get('model', 'dropout'))
 

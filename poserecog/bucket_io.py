@@ -224,7 +224,10 @@ class BucketSentenceIter(mx.io.DataIter):
           split = split['val']
         print( 'reading from %s, phase train %d' % (self.data_path,self.train) )
         cates = set([x.split('_')[0] for x in split])
+        cates.remove('stop')
+        pdb.set_trace()
         print 'categories: ' + str(cates)
+        self.cls_num = len(cates)
 
         data = {}
         # get data path
@@ -240,14 +243,15 @@ class BucketSentenceIter(mx.io.DataIter):
             for it in data[k]:
                 print it
                 rawx = json.load(open(it, 'r'))
-                anc = np.asarray(rawx[0]['p'])
-                anc_head = anc[0]
-                anc_len = np.linalg.norm(anc[2] - anc[3]) +\
-                          np.linalg.norm(anc[3] - anc[4]) +\
-                          np.linalg.norm(anc[5] - anc[6]) +\
-                          np.linalg.norm(anc[6] - anc[7]) +\
-                          np.linalg.norm(anc[2] - anc[5])
+                anc = np.asarray( [it['p'] for it in rawx] )
+                anc_head = anc[0][0]  # fr0 head
+                anc_len = np.mean(np.linalg.norm(anc[:,0] - anc[:,1],axis=1) +\
+                          np.linalg.norm(anc[:,8] - anc[:,9],axis=1) +\
+                          np.linalg.norm(anc[:,11] - anc[:,12],axis=1))
+                          #2d pose vert line stable
                 x = [(it['p']-anc_head).reshape(-1,)/anc_len for it in rawx]
+                #x = [it[:14] for it in x]
+                
                 y = np.asarray([0] * self.default_bucket_key)
                 y[:len(rawx)] = idx + 1
                 #y[len(x)-1] = idx
