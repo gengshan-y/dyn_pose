@@ -6,6 +6,7 @@ import os
 import json
 from poserecog.util import recReadDir
 from sklearn.preprocessing import normalize
+from poserecog.config import lstm_config as lcf
 
 # The interface of a data iter that works for bucketing
 #
@@ -64,7 +65,7 @@ class DummyIter(mx.io.DataIter):
 class BucketSentenceIter(mx.io.DataIter):
     def __init__(self, buckets, batch_size,
                  data_name='data', label_name='label',
-                 model_parallel=False, dataPath = './data', train = False):
+                 model_parallel=False, dataPath = './data',train=False,aug=False):
         super(BucketSentenceIter, self).__init__()
 
         # pre-allocate with the largest bucket for better memory sharing
@@ -74,6 +75,7 @@ class BucketSentenceIter(mx.io.DataIter):
         self.data = [[] for _ in buckets]
         self.tmpLabel = []
         self.train = train
+        self.aug = aug
 
         # save data path
         self.data_path = dataPath
@@ -223,7 +225,6 @@ class BucketSentenceIter(mx.io.DataIter):
         print( 'reading from %s, phase train %d' % (self.data_path,self.train) )
         cates = set([x.split('_')[0] for x in split])
         cates.remove('stop');cates.remove('circle')
-        pdb.set_trace()
         print 'categories: ' + str(cates)
         self.cls_num = len(cates)
 
@@ -249,6 +250,8 @@ class BucketSentenceIter(mx.io.DataIter):
                           #2d pose vert line stable
                 x = [(it['p']-anc_head).reshape(-1,)/anc_len for it in rawx]
                 #x = [it[:14] for it in x]
+        
+                if len(x) > self.default_bucket_key: x = x[:self.default_bucket_key]
                 
                 y = np.asarray([0] * self.default_bucket_key)
                 y[:len(rawx)] = idx + 1
@@ -259,10 +262,37 @@ class BucketSentenceIter(mx.io.DataIter):
                 trainY.append(y)
         print str(len(trainY)) + ' samples'
     
-        if self.train:
-          for it in range(0, 5):
-            trainX += trainX
-            trainY += trainY    
+        if self.aug:
+          old_trainX = trainX[:];new_trainX=trainX[:]
+          old_trainY = trainY[:];new_trainY=trainY[:]
+          for iter in range(31):
+            for it in old_trainX:
+              rd = np.random.randn(lcf.input_dim) * 0
+              it_aug = [x+rd for x in it]
+              trainX.append(it_aug)
+            trainY += old_trainY
+
+          #old_trainX = trainX[:]
+          #for it in old_trainX:
+          #  fl = [ np.hstack(( -it[0].reshape(-1,2)[:,0:1], it[0].reshape(-1,2)[:,1:2] )).reshape(-1)
+          #        for x in it]
+          #  trainX.append (fl)
+          #trainY += trainY
+
+          #pdb.set_trace()
+          #for it in range(0, 5):
+          #  trainX += trainX
+          #  trainY += trainY    
+          #  print '%d,%d' % (len(trainX),len(trainY))
+
+          #for it in range(len(new_trainX)):
+          #  summ = 0
+          #  for itt in range(len(new_trainX[it])):
+          #    summ += np.sum( trainX[it][itt] - new_trainX[it][itt] )
+          #    summ += trainY[it][itt] - new_trainY[it][itt]
+          #print summ
+          #trainX = new_trainX
+          #trainY = new_trainY
         
         self.trainX = trainX
         self.trainY = trainY

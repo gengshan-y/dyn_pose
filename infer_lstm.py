@@ -13,27 +13,26 @@ init_c = [('l%d_init_c'%l, (lcf.batch_size, lcf.num_hidden)) \
 init_h = [('l%d_init_h'%l, (lcf.batch_size, lcf.num_hidden)) \
           for l in range(lcf.num_lstm_layer)]
 init_states = init_c + init_h
+pdb.set_trace()
 
-data_train = BucketSentenceIter(lcf.buckets, lcf.batch_size, dataPath = 'out')
-data_train.provide_data += init_states
+data_val = BucketSentenceIter(lcf.buckets, lcf.batch_size, dataPath = 'out',train=False)
+data_val.provide_data += init_states
 
 sym_gen = get_lstm(num_lstm_layer=lcf.num_lstm_layer, input_len=lcf.input_dim,
             num_hidden = lcf.num_hidden, num_embed = lcf.num_embed,
-            num_label = data_train.cls_num + 1, dropout = lcf.dropout)
+            num_label = data_val.cls_num + 1, dropout = lcf.dropout)
 
-model = mx.mod.BucketingModule(
-    sym_gen             = sym_gen,
-    default_bucket_key  = data_train.default_bucket_key,
-    context             = mx.gpu(lcf.ctx))
+model = mx.module.Module(sym_gen(lcf.buckets[0])[0],\
+                         data_names = [x[0] for x in data_val.provide_data],\
+                         label_names=('softmax_label',),context=mx.gpu(lcf.ctx))
 
 _, arg_params, aux_params = mx.model.load_checkpoint('model/pose_lstm',lcf.load_epoch)
-model.bind(data_shapes=data_train.provide_data,label_shapes=data_train.provide_label,\
+model.bind(data_shapes=data_val.provide_data,label_shapes=data_val.provide_label,\
            for_training=False)
 model.set_params(arg_params = arg_params, aux_params=aux_params)
 
-pdb.set_trace()
 
-data_iter = iter(data_train)
+data_iter = iter(data_val)
 end_of_batch = False
 next_data_batch = next(data_iter)
 lb = [];pd = []
@@ -42,7 +41,6 @@ while not end_of_batch:
   #print 'cate:%f' % lbs[np.where(lbs != -1)][0]
   #print next_data_batch.data[0].asnumpy()[0]
   model.forward(next_data_batch)
-  pdb.set_trace()
   ret = model.get_outputs()[0].asnumpy()
   lb.append( lbs[np.where(lbs != 0)][0] )
   pd.append(np.argmax(np.sum(ret,axis=0)[1:])+1) 
@@ -52,8 +50,7 @@ while not end_of_batch:
   except StopIteration:
     end_of_batch = True
 
-from sklearn.metrics import confusion_matrix, precision_score, accuracy_score
+from sklearn.metrics import confusion_matrix, f1_score
 pdb.set_trace()
 print confusion_matrix(lb,pd)
-print precision_score(lb,pd,average=None)
-print accuracy_score(lb,pd)
+print np.mean(f1_score(lb,pd,average=None))
