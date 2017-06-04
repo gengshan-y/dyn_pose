@@ -4,7 +4,6 @@ import json
 from matplotlib import pyplot as plt
 import numpy as np
 import os
-import scipy.ndimage
 import scipy.signal
 import time
 import ConfigParser
@@ -16,6 +15,9 @@ from poserecog.config import lstm_config as lcf
 from poserecog.get_lstm_sym import get_lstm
 from poserecog.bucket_io import SimpleBatch
 
+import threading
+import thread
+			
 class Pipeline:
   def __init__(self, config_path):
     config = ConfigParser.ConfigParser()
@@ -46,8 +48,27 @@ class Pipeline:
 
     self.buckets = lcf.test_buckets
     self.reset()
-    self.model_lstm = self.load_bucketing_module(lstm_model_path)
+    self.model_lstm = self.load_lstm_module(lstm_model_path)
+
+    self.warm_up()
   
+
+  def warm_up(self):
+    beg = time.time()
+    dummy = mx.io.NDArrayIter(data = {'data':np.zeros((1,3,600,800)),\
+                                       'im_info':np.zeros((1,3))})
+    self.model_det.predict(dummy)
+
+    dummy = mx.io.NDArrayIter(data={'image':np.zeros((1,3,self.boxsize,self.boxsize)),\
+                             'center_map':self.gauss[np.newaxis,:,:,:]})
+    self.model_pose.predict(dummy)
+
+    dummy = SimpleBatch('data',[mx.nd.zeros((1,self.buckets,lcf.input_dim))],\
+                        'label',[mx.nd.array([[1]*self.buckets])],self.buckets)
+    self.model_lstm.forward(dummy)
+
+    print 'warming up took %f s' % (time.time()-beg)
+
 
   def reset(self):
     self.pose_buf = np.zeros((self.buckets, lcf.input_dim/2, 2))
@@ -59,19 +80,20 @@ class Pipeline:
     return np.transpose(gauss2d[:,:,np.newaxis], (2,0,1))
 
 
-  def load_bucketing_module(self,path):
+  def load_lstm_module(self,path):
+    provide_data = [('data', (1, self.buckets, lcf.input_dim))]
+    n_h = lcf.num_hidden
+    for i in range(lcf.num_lstm_layer):
+      provide_data += [('l%d_init_c'%i, (1, n_h)), ('l%d_init_h'%i, (1, n_h))]
+
     sym_gen = get_lstm(num_lstm_layer=lcf.num_lstm_layer, input_len=lcf.input_dim,
             num_hidden = lcf.num_hidden, num_embed = lcf.num_embed,
             num_label = 6, dropout = lcf.dropout)
 
-    model = mx.mod.BucketingModule(
-        sym_gen             = sym_gen,
-        default_bucket_key  = self.buckets,
-        context             = self.ctx)
+    model = mx.mod.Module(sym_gen(self.buckets)[0],\
+                          data_names = [x[0] for x in provide_data],\
+                          label_names=('softmax_label',), context = self.ctx)
 
-    provide_data = [('data', (1, self.buckets, lcf.input_dim)),\
-    ('l0_init_c', (1, 512)), ('l1_init_c', (1, 512)), ('l2_init_c', (1, 512)),\
-    ('l0_init_h', (1, 512)), ('l1_init_h', (1, 512)), ('l2_init_h', (1, 512))]
     _, arg_params, aux_params = mx.model.load_checkpoint(path,lcf.load_epoch)
     model.bind(data_shapes=provide_data,\
        label_shapes=[('softmax_label', (1, self.buckets))], for_training=False)
@@ -118,15 +140,34 @@ class Pipeline:
 
     return [mx.nd.array(out)]
 
+  def run_vid_buff(self):
+    while True:
+      self.lock.acquire()
+      self.batch,self.imgdt_list = self.cam_iter.next()
+      self.lock.release()
+	
   def process(self, path):
-    cam_iter = CamIter(boxsize=self.boxsize,path=path)
-
-    
-    while cam_iter.iter_next():
-      batch,imgdt_list = cam_iter.next()
+    self.cam_iter = CamIter(boxsize=self.boxsize,path=path)
+	
+    if self.cam_iter.vid_cap is not None:
+      self.batch,self.imgdt_list = None,None
+      self.lock = threading.Lock()
+      thread.start_new_thread(self.run_vid_buff, ())
+	
+    while True:
+      beg_time = time.time()
+	  
+      if self.cam_iter.vid_cap is not None:
+        self.lock.acquire()
+        if self.batch is not None:
+          batch,imgdt_list = self.batch,self.imgdt_list;self.lock.release()
+        else:
+         self.lock.release();continue
+      else:
+        batch,imgdt_list = self.cam_iter.next() 
       start_time = time.time()
       output=self.model_det.predict(batch)
-      #print('Person net took %.2f ms.' % (1000 * (time.time() - start_time)))
+      print('Person net took %.2f ms.' % (1000 * (time.time() - start_time)))
               
       # form another batch
       rois = output[0][0,:,1:]
@@ -145,7 +186,7 @@ class Pipeline:
 
       start_time = time.time()
       output=self.model_pose.predict(batch)[-1]  # last layer
-      #print('Pose net took %.2f ms.' % (1000 * (time.time() - start_time)))
+      print('Pose net took %.2f ms.' % (1000 * (time.time() - start_time)))
 
       for i in range(len(output)):
         ret=[]
@@ -154,9 +195,10 @@ class Pipeline:
           part_map = cv2.resize(part_map, (0,0), fx=8, fy=8, interpolation=cv2.INTER_CUBIC)
           y,x = np.unravel_index(part_map.argmax(),part_map.shape)
           ret.append( [x,y] )
+      if self.cam_iter.vid_cap is not None:
+        util.pose2Img2(ret)
       self.get_pose(ret)
 
-      
       batch = SimpleBatch('data',self.pose_process(),\
                           'label',[mx.nd.array([[1]*self.buckets])],self.buckets)
       self.model_lstm.forward(batch)
@@ -164,7 +206,7 @@ class Pipeline:
       print self.mp[np.argmax(np.sum(ret,axis=0)[1:])+1]
       for i,it in enumerate(np.sum(ret,axis=0)[1:]):
         print '%s:%f' % (self.mp[i+1],it)
-      
+      print('One batch took %.2f ms.' % (1000 * (time.time() - beg_time)))
 
 
   def extract(self, img_path, write=True):

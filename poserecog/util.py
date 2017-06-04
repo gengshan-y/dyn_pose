@@ -4,6 +4,19 @@ import numpy as np
 from cStringIO import StringIO
 import scipy.ndimage
 
+def pose2Img2(framePose):
+    pairRef = [1, 2, 3, 4, 4, 5, 6, 7, 7, 8, 9, 10, 10, 11, 12, 13, 13, 14]
+    pairRef = np.reshape(pairRef,(-1,2)) - 1
+    im = np.zeros((300,300,3), np.uint8)
+    for cord in framePose:
+
+        cv2.circle(im, tuple(cord), 1, (0, 255, 0), 1)
+    for lineMark in pairRef:
+        # print tuple(framePose[lineMark[0]][:-1])
+        cv2.line(im, tuple(framePose[lineMark[0]]),  tuple(framePose[lineMark[1]]), (0, 0, 255), 1) 
+    cv2.imshow("", im)
+    cv2.waitKey(1)
+
 
 def bbox_pred(boxes, box_deltas):
     """

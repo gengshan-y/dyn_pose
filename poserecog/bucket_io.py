@@ -267,7 +267,7 @@ class BucketSentenceIter(mx.io.DataIter):
           old_trainY = trainY[:];new_trainY=trainY[:]
           for iter in range(31):
             for it in old_trainX:
-              rd = np.random.randn(lcf.input_dim) * 0
+              rd = np.random.randn(lcf.input_dim) * 0.001
               it_aug = [x+rd for x in it]
               trainX.append(it_aug)
             trainY += old_trainY
