@@ -3,7 +3,8 @@ import poserecog.pipe as pipe
 import glob
 
 config_path = 'model/model.config'
-base_path = 'dataset/pose'
+base_path = 'dataset/weizmann'
+out_path = 'out_weiz'
 
 piper = pipe.Pipeline(config_path)
 
@@ -16,7 +17,7 @@ print '%d videos' % len(scls)
 
 for c in scls:
   path =  '%s/%s_*.jpg' % (base_path,c)
-  piper.extract(path)
+  piper.extract(path, out_path)
 
 piper.plot_len_dist()
 

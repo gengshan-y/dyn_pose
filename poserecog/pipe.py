@@ -209,7 +209,7 @@ class Pipeline:
       print('One batch took %.2f ms.' % (1000 * (time.time() - beg_time)))
 
 
-  def extract(self, img_path, write=True):
+  def extract(self, img_path, out_path = None):
     cam_iter = CamIter(boxsize=self.boxsize,path=img_path)
     write_list=[]
     while cam_iter.iter_next():
@@ -249,8 +249,8 @@ class Pipeline:
           ret.append( [x,y] )
         #self.disp_map(person_image.copy(), ret)
         write_list.append( {'id':imgdt_list[i]['path'],'p':ret} )
-    if write:
-      write_path = 'out/' + img_path.split('/')[-1].rsplit('_',1)[0] + '.json'
+    if out_path is not None:
+      write_path = '%s/%s.json' % (out_path,img_path.split('/')[-1].rsplit('_',1)[0])
       print 'writing to %s' % write_path
       json.dump(write_list, open(write_path ,'w'))
     
