@@ -5,10 +5,10 @@ import subprocess
 
 cate_pos = -2
 fps = 5
-suffix = '.dav'
+suffix = '.avi'
 bin_path = '/usr/local/ffmpeg/bin/'
-in_path = 'dataset/pose_vid/'
-out_path = 'dataset/pose/'
+in_path = '/data/gengshan/har/weizmann/'
+out_path = 'dataset/weizmann/' # 'dataset/pose_vid/' #'dataset/pose/'
 
 vid_list = recReadDir([in_path], contain = suffix)
 keys = list(set([x.split('/')[cate_pos] for x in vid_list]))
@@ -28,5 +28,5 @@ for k in keys:
 
 pdb.set_trace()
 import json
-with open('split.json','w') as f:
+with open('split-weiz.json','w') as f:
   json.dump({'train':train_l,'val':val_l}, f)

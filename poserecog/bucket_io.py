@@ -216,7 +216,7 @@ class BucketSentenceIter(mx.io.DataIter):
         self.bucket_curr_idx = [0 for x in self.data]
 
     def dLoader(self):
-        with open('split.json', 'r') as f:
+        with open('%s/split.json'%lcf.data_base, 'r') as f:
           split = json.load(f)
         if self.train:
           split = split['train']
@@ -224,7 +224,7 @@ class BucketSentenceIter(mx.io.DataIter):
           split = split['val']
         print( 'reading from %s, phase train %d' % (self.data_path,self.train) )
         cates = set([x.split('_')[0] for x in split])
-        cates.remove('stop');cates.remove('circle')
+        # cates.remove('stop');cates.remove('circle')
         print 'categories: ' + str(cates)
         self.cls_num = len(cates)
 
@@ -232,7 +232,7 @@ class BucketSentenceIter(mx.io.DataIter):
         # get data path
         for cate in cates:
             data[cate] = sum([glob.glob('%s/%s*.json'%(self.data_path,x))\
-                          for x in split if cate in x] ,[])
+                          for x in split if cate == x.split('_')[0]] ,[])
 
         trainX = []
         trainY = []

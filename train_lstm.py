@@ -48,9 +48,9 @@ init_h = [('l%d_init_h'%l, (lcf.batch_size, lcf.num_hidden)) \
 init_states = init_c + init_h
 
 data_train = BucketSentenceIter(lcf.buckets, lcf.batch_size,\
-                                dataPath = 'out', train = True,aug=True )
+                                dataPath = lcf.data_base, train = True,aug=True )
 data_val = BucketSentenceIter(lcf.buckets, lcf.batch_size,\
-                                dataPath = 'out' )
+                                dataPath = lcf.data_base )
 
 data_train.provide_data += init_states
 data_val.provide_data += init_states

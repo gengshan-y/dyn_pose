@@ -15,7 +15,8 @@ init_h = [('l%d_init_h'%l, (lcf.batch_size, lcf.num_hidden)) \
 init_states = init_c + init_h
 pdb.set_trace()
 
-data_val = BucketSentenceIter(lcf.buckets, lcf.batch_size, dataPath = 'out',train=False)
+data_val = BucketSentenceIter(lcf.buckets, lcf.batch_size, \
+                              dataPath = lcf.data_base,train=False)
 data_val.provide_data += init_states
 
 sym_gen = get_lstm(num_lstm_layer=lcf.num_lstm_layer, input_len=lcf.input_dim,

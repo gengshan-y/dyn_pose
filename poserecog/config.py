@@ -17,3 +17,5 @@ class lstm_config(object):
 
   load_epoch = int(config.get('model', 'load_epoch'))
   test_buckets = int(config.get('model', 'test_buckets'))
+
+  data_base = config.get('model', 'data_base')

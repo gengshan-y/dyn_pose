@@ -7,8 +7,8 @@ cate_pos = -2
 fps = 5
 suffix = '.dav'
 bin_path = '/usr/local/ffmpeg/bin/'
-in_path = 'dataset/pose_vid/'
-out_path = 'dataset/pose/'
+in_path = '/data/gengshan/har/weizmann/'
+out_path = 'dataset/weizmann/'
 
 vid_list = recReadDir([in_path], contain = suffix)
 keys = list(set([x.split('/')[cate_pos] for x in vid_list]))
