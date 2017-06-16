@@ -88,7 +88,7 @@ class Pipeline:
 
     sym_gen = get_lstm(num_lstm_layer=lcf.num_lstm_layer, input_len=lcf.input_dim,
             num_hidden = lcf.num_hidden, num_embed = lcf.num_embed,
-            num_label = 6, dropout = lcf.dropout)
+            num_label = lcf.label_num, dropout = lcf.dropout)
 
     model = mx.mod.Module(sym_gen(self.buckets)[0],\
                           data_names = [x[0] for x in provide_data],\

@@ -55,9 +55,10 @@ data_val = BucketSentenceIter(lcf.buckets, lcf.batch_size,\
 data_train.provide_data += init_states
 data_val.provide_data += init_states
 
+assert(data_train.cls_num + 1 == lcf.label_num)
 sym_gen = get_lstm(num_lstm_layer=lcf.num_lstm_layer, input_len=lcf.input_dim,
                    num_hidden = lcf.num_hidden, num_embed = lcf.num_embed,
-                   num_label = data_train.cls_num + 1, dropout = lcf.dropout)
+                   num_label = lcf.label_num, dropout = lcf.dropout)
 
 model = mx.module.Module(sym_gen(lcf.buckets[0])[0], \
                          data_names = [x[0] for x in data_train.provide_data],\
