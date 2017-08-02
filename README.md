@@ -1,17 +1,21 @@
 # dyn_pose
-Training and inference part of a LSTM-based action recognition model.
+Training and inference code for [LSTM-based action recognition model](http://www.contrib.andrew.cmu.edu/~gengshay/wordpress/index.php/424-2/).
+Online version to be released later.
 
 ## Steps
-- preprocess.py / split.py
-- extract.py
-- train.py
-- infer.py
-- example.py
+- pre-process data: preprocess.py / split.py
+- extract pose: extract.py
+- train model: train_lstm.py
+- evaluate model: infer_lstm.py
+- offline demo: example.py
 
 ## Notes
 - modify label_num in model/lstm.config
 
+## Utils
+- display.ipynb: display pose estimation results
+- run.sh: evaluation script
+- test.ipynb: miscellaneous
+
 ## TODO
-- change bucket size to reduce lag
-- change box size to red lag
-- change net structure to red lag
+- reduce spatial net size
