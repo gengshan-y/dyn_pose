@@ -3,6 +3,7 @@ Training and inference code for [LSTM-based action recognition model](http://www
 Online version to be released later.
 
 ## Steps
+- [models](https://drive.google.com/open?id=1v1TeDwCWb426g_LWnuKkVHr8PZZR-P2S)
 - pre-process data: preprocess.py / split.py
 - extract pose: extract.py
 - train model: train_lstm.py
@@ -19,3 +20,6 @@ Online version to be released later.
 
 ## TODO
 - reduce spatial net size
+
+## Reference 
+- [Convolutional Pose Machines](https://github.com/shihenw/convolutional-pose-machines-release)
